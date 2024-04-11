@@ -31,7 +31,7 @@ void checkRecovery::init()
 
     if (!QDir(RECOVERY_DIR).exists())
     {
-        qCritical() << "WARNING - Recovery directory doesn't exist, will not perform recovery check";
+        qWarning() << "WARNING - Recovery directory doesn't exist, will not perform recovery check";
         return;
     }
 
@@ -48,7 +48,7 @@ void checkRecovery::startBackupCheck()
     if (QDir(RECOVERY_DIR).entryList(QDir::NoDotAndDotDot|QDir::AllEntries).count() == 0) //check if /mnt/recovery has contents
     {
         displaySplash(UPDATE_SPLASH);
-        qWarning() << "Recovery partition is empty! Update recovery partition";
+        qWarning() << "WARNING - Recovery partition is empty! Update recovery partition";
         updateRecoveryPartition();
     }
     else
@@ -56,13 +56,13 @@ void checkRecovery::startBackupCheck()
         {
             displaySplash(UPDATE_SPLASH);
 
-            qWarning() << "Previous update was successful! Update recovery partition";
+            qWarning() << "WARNING - Previous update was successful! Update recovery partition";
             updateRecoveryPartition();
             QDir(RECOVERY_DIR).remove(UPDATE_SUCCESS_FLAG); //wait until everything is synced before removing flag
         }
         else
         {
-            qWarning() << "No successful update detected, checking files against recovery";
+            qWarning() << "WARNING - No successful update detected, checking files against recovery";
             startRecoveryProcess();
         }
 }
@@ -79,7 +79,7 @@ void checkRecovery::updateRecoveryPartition()
     //parse through insp_LinuxUpdateFile.txt
     parseUpdateFile(RECOVERY_DIR + "/" + UPDATE_INFO);
 
-    //QDir(RECOVERY_DIR).remove(UPDATE_INFO);
+    QDir(RECOVERY_DIR).remove(UPDATE_INFO);
     QDir(RECOVERY_DIR).remove(CHECKSUM_FILE);
 
     startRecoveryProcess(); //ensure everything is synced
@@ -132,8 +132,6 @@ void checkRecovery::parseUpdateFile(QString updateFilePath)
                 //Only parse individual files
                 if ( type == "ADD" )
                 {
-                    qCritical() << destination_path + "/" + filename;
-                    qCritical() << RECOVERY_DIR + destination_path + "/" + filename;
                     copyFileToDestination(destination_path + "/" + filename, RECOVERY_DIR + destination_path + "/" + filename);
                 }
             }
@@ -152,11 +150,11 @@ void checkRecovery::startRecoveryProcess()
 {
     if ( ! fileExists(RECOVERY_DIR + "/" + CHECKSUM_FILE))
     {
-        qWarning() << "No Checksum List found!";
+        qWarning() << "WARNING - No Checksum List found!";
         generateChecksumList();
     }
 
-    qWarning() << "Checking file system against recovery partition!";
+    qWarning() << "WARNING - Checking file system against recovery partition!";
     checkForRecovery();
 }
 
@@ -170,7 +168,7 @@ void checkRecovery::generateChecksumList()
     //contents of sha1sum
     //7e737b16d633cc169f1f9ff85e48e5acf32e174c  /mnt/recovery/mnt/app/bin/healthmonitor
 
-    qWarning() << "Generating checksum list";
+    qWarning() << "WARNING - Generating checksum list";
 
     //Acquire all regular files
     QList<QByteArray> recovery_sum_raw_files = execCmdLine("find", QStringList() <<
@@ -186,7 +184,10 @@ void checkRecovery::generateChecksumList()
 
     //exclude checking for databases, the checksum file, and the update flag
     foreach( QByteArray recovery_sum_raw_file, recovery_sum_raw_files ) {
-        if ( !recovery_sum_raw_file.contains(".db") && !recovery_sum_raw_file.contains(".sha1") && !recovery_sum_raw_file.contains(".flag") )
+        if ( !recovery_sum_raw_file.contains(".db") &&
+             !recovery_sum_raw_file.contains(".sha1") &&
+             !recovery_sum_raw_file.contains(".flag") &&
+             !recovery_sum_raw_file.contains("InspRecovery"))
         {
             logToChecksumList(execCmdLine("sha1sum", QStringList() << recovery_sum_raw_file));
         }
@@ -194,7 +195,10 @@ void checkRecovery::generateChecksumList()
 
     //exclude checking for databases, the checksum file, and the update flag
     foreach( QByteArray recovery_sum_raw_sym_link, recovery_sum_raw_sym_links ) {
-        if ( !recovery_sum_raw_sym_link.contains(".db") && !recovery_sum_raw_sym_link.contains(".sha1") && !recovery_sum_raw_sym_link.contains(".flag") )
+        if ( !recovery_sum_raw_sym_link.contains(".db") &&
+             !recovery_sum_raw_sym_link.contains(".sha1") &&
+             !recovery_sum_raw_sym_link.contains(".flag") &&
+             !recovery_sum_raw_sym_link.contains("InspRecovery"))
         {
             logToChecksumList(execCmdLine("sha1sum", QStringList() << recovery_sum_raw_sym_link));
         }
@@ -228,7 +232,7 @@ void checkRecovery::checkForRecovery()
             if ( ! fileExists(rootfs_path) )
             {
                 displaySplash(WARNING_SPLASH);
-                qWarning() << rootfs_path + " doesnt exist, copying from recovery partition path " << recovery_path;
+                qWarning() << "WARNING - " + rootfs_path + " doesnt exist, copying from recovery partition path " << recovery_path;
                 copyFileToDestination(recovery_path, rootfs_path);
             }
             else
@@ -242,7 +246,7 @@ void checkRecovery::checkForRecovery()
                 if (rootfs_sum != recovery_sum)
                 {
                     displaySplash(WARNING_SPLASH);
-                    qWarning() << rootfs_path + "     AND    " + recovery_path + "  DIFFER, copying from recovery partition";
+                    qWarning() << "WARNING - " + rootfs_path + "     AND    " + recovery_path + "  DIFFER, copying from recovery partition";
                     // overwrite the test file with the recovery file
                     copyFileToDestination(recovery_path, rootfs_path);
                 }
@@ -375,7 +379,7 @@ void checkRecovery::logToChecksumList(QString data)
     }
     else
     {
-        qCritical() << "cannot open the file " + RECOVERY_DIR + "/" + CHECKSUM_FILE;
+        qCritical() << "CRITICAL - cannot open the file " + RECOVERY_DIR + "/" + CHECKSUM_FILE;
     }
 
     if ( logFile.isOpen() )
