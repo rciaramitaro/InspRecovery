@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/">
+        <file>warning_splash.bmp</file>
+        <file>update_splash.bmp</file>
+        <file>roth_splash.bmp</file>
+    </qresource>
+</RCC>
